@@ -1,17 +1,23 @@
-# Gunakan base image OpenJDK 17
-FROM openjdk:17-jdk-slim
+# Gunakan image Maven dengan JDK 17
+FROM maven:3.8.7-openjdk-17-slim AS build
 
-# Set direktori kerja di dalam container
+# Set working directory
 WORKDIR /app
 
-# Copy semua file dari repository ke dalam container
+# Copy semua file ke dalam container
 COPY . .
 
-# Beri izin eksekusi ke mvnw (Maven Wrapper)
-RUN chmod +x mvnw
-
 # Build aplikasi menggunakan Maven
-RUN ./mvnw clean package -DskipTests
+RUN mvn clean package -DskipTests
 
-# Set perintah default untuk menjalankan aplikasi
-CMD ["java", "-jar", "target/vulnerable-webapp-1.0-SNAPSHOT.jar"]
+# Gunakan image runtime yang lebih ringan
+FROM openjdk:17-jdk-slim
+
+# Set working directory
+WORKDIR /app
+
+# Copy hasil build dari stage sebelumnya
+COPY --from=build /app/target/*.jar app.jar
+
+# Jalankan aplikasi
+CMD ["java", "-jar", "app.jar"]
